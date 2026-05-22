@@ -53,7 +53,9 @@ Feature 1 — Line Explainer Highlight any line of code, right click, select "Ex
 
 Feature 2 — Syntax Fixer Write what you mean — broken syntax, pseudocode, half-formed logic. Highlight it, right click, select "Fix syntax." CoTran returns working code that matches your intent. You write with intent, CoTran handles execution correctness.
 
-Why this matters: People vibe-code low quality software not because they don't care but because intentional building feels impossibly slow when every line is a lookup. If you can write what you mean and fix execution instantly, you stay in the builder mindset. This feature exists because syntax friction has killed real projects — including this one's author's own.
+Why this matters: People vibe-code low quality software not because they don't care but because intentional building feels impossibly slow when every line is a lookup. If you can write what you mean and fix execution instantly, you stay in the builder mindset. This feature exists because syntax friction has killed real projects — something that I have faced countless times.
+
+HOWEVER, CoTran is not designed to generate application logic autonomously. It is designed for situations where the developer already knows the intended behavior, but translation into repository-consistent syntax is slowed by unfamiliar frameworks, languages, or codebase conventions. Otherwise, the developer should just ask claude code, cursor, etc.
 
 
 Tech Stack
