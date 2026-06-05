@@ -1,12 +1,16 @@
-import openai
+from openai import OpenAI
 import tree_sitter
-import pinecone
+from pinecone.grpc import PineconeGRPC as Pinecone
+from pinecone import ServerlessSpec
 import os
 import tree_sitter_python as tspython
 from tree_sitter import Language, Parser
 
 PY_LANGUAGE = Language(tspython.language())
 parser = Parser((PY_LANGUAGE))
+client = OpenAI()
+pc = Pinecone(api_key = os.environ.get("PINECONE_API_KEY"))
+index = pc.Index("cotran-v1")
 
 def walk_repo(repo):
     #walks through the repo, finds all python files
@@ -40,8 +44,39 @@ def parse_chunks(file):
     chunks = walk_node(curr, chunks)
     return chunks
 
+def get_openai_embeddings(chunks):
+    #generate a list of vector embeddings from the list of chunks
+    vectors = []
+    for chunk in chunks:
+        response = client.embeddings.create(model = "text-embedding-3-small",
+                                            input = chunk)
+        vectors.append(response.data[0].embedding)
+    return vectors
+
+def upsert_to_pinecone(chunks, vectors):
+    #update and insert vectors in to pinecone db
+    if not pc.has_index("cotran-v1"):
+        pc.create_index(name = "cotran-v1", dimension = 1536, metric = "cosine",
+                        spec=ServerlessSpec(cloud = "aws", region = "us-east-1"))
+    vectors_to_upsert = []
+    for i, vector in enumerate(vectors):
+        upsert = {"id": f"chunk-{i}", "values": vector, "metadata": {"text": chunks[i].decode()}}
+        vectors_to_upsert.append(upsert)
+    upsert_response = index.upsert(vectors = vectors_to_upsert)
+    return upsert_response
+
+def test_query(query):
+    #querying through pinecone db and finding top 3 most similar
+    vector = get_openai_embeddings([query])
+    query_response = index.query(vector = vector[0], top_k = 3,
+                                 include_values = False, include_metadata = True)
+    return query_response
+    
+
 if __name__ == "__main__":
     files = walk_repo("/Users/donghoon/Desktop/ct_home/fastapi")
     chunks = parse_chunks(files[0])
-
-    print(chunks)
+    vectors = get_openai_embeddings(chunks)
+    upsert_response = upsert_to_pinecone(chunks, vectors)
+    query_response = test_query("poo")
+    print(query_response)
