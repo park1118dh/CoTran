@@ -48,6 +48,9 @@ def get_openai_embeddings(chunks):
     #generate a list of vector embeddings from the list of chunks
     vectors = []
     for chunk in chunks:
+        if len(chunk) > 8000:
+            chunk = chunk[:8000]
+        print(len(chunk))
         response = client.embeddings.create(model = "text-embedding-3-small",
                                             input = chunk)
         vectors.append(response.data[0].embedding)
@@ -75,8 +78,8 @@ def test_query(query):
 
 if __name__ == "__main__":
     files = walk_repo("/Users/donghoon/Desktop/ct_home/fastapi")
-    chunks = parse_chunks(files[0])
-    vectors = get_openai_embeddings(chunks)
-    upsert_response = upsert_to_pinecone(chunks, vectors)
-    query_response = test_query("poo")
-    print(query_response)
+    for file in files:
+        chunks = parse_chunks(file)
+        if chunks:
+            vectors = get_openai_embeddings(chunks)
+            upsert_response = upsert_to_pinecone(chunks, vectors)
