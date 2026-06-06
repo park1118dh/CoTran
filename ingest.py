@@ -47,13 +47,15 @@ def parse_chunks(file):
 def get_openai_embeddings(chunks):
     #generate a list of vector embeddings from the list of chunks
     vectors = []
+    newchunks = []
     for chunk in chunks:
         if len(chunk) > 8000:
             chunk = chunk[:8000]
-        print(len(chunk))
-        response = client.embeddings.create(model = "text-embedding-3-small",
-                                            input = chunk)
-        vectors.append(response.data[0].embedding)
+        newchunks.append(chunk.decode("utf-8", errors="ignore"))
+    response = client.embeddings.create(model = "text-embedding-3-small",
+                                            input = newchunks)
+    for rdata in response.data:
+        vectors.append(rdata.embedding)
     return vectors
 
 def upsert_to_pinecone(chunks, vectors):
@@ -63,10 +65,15 @@ def upsert_to_pinecone(chunks, vectors):
                         spec=ServerlessSpec(cloud = "aws", region = "us-east-1"))
     vectors_to_upsert = []
     for i, vector in enumerate(vectors):
+        if len(chunks[i]) > 4000:
+            chunks[i] = chunks[i][:4000]
         upsert = {"id": f"chunk-{i}", "values": vector, "metadata": {"text": chunks[i].decode()}}
         vectors_to_upsert.append(upsert)
-    upsert_response = index.upsert(vectors = vectors_to_upsert)
-    return upsert_response
+    for i in range(0, len(vectors_to_upsert), 50):
+        batch = vectors_to_upsert[i:i+50]
+        index.upsert(vectors=batch)
+    
+    return None
 
 def test_query(query):
     #querying through pinecone db and finding top 3 most similar
@@ -78,8 +85,13 @@ def test_query(query):
 
 if __name__ == "__main__":
     files = walk_repo("/Users/donghoon/Desktop/ct_home/fastapi")
+    allchunks = []
+    allvectors = []
     for file in files:
         chunks = parse_chunks(file)
         if chunks:
             vectors = get_openai_embeddings(chunks)
-            upsert_response = upsert_to_pinecone(chunks, vectors)
+            allvectors.extend(vectors)
+            allchunks.extend(chunks)
+    upsert_to_pinecone(allchunks, allvectors)
+    print("DONE")

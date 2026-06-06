@@ -1,7 +1,7 @@
 # CoTran — Project Context
 
 ## Current Status
-Step 1 complete. Full pipeline working end-to-end. Moving to Step 2.
+Step 1 complete. Full pipeline working end-to-end on entire FastAPI repo. Runs in ~3.5 minutes. Moving to Step 2.
 
 ## Active Branch
 feat/backend-pipeline
@@ -20,14 +20,17 @@ Point ingest.py at the FastAPI repo, run it, Pinecone has meaningful chunks stor
 - Embedding model: OpenAI text-embedding-3-small
 - Vector DB: Pinecone (free tier, us-east-1, serverless)
 - Pinecone index name: cotran-v1
+- Batch size: 50 vectors per upsert call
+- Chunk truncation: 4000 chars for metadata, 8000 chars for embeddings
 
 ## What's Working
 - `walk_repo(repo)` — walks a directory, returns list of all `.py` file paths
 - `walk_node(node, chunks)` — recursively traverses AST, collects function/class nodes
 - `parse_chunks(filepath)` — parses a .py file with tree-sitter, returns list of chunk bytes
-- `get_openai_embeddings(chunks)` — embeds a list of chunks with text-embedding-3-small
-- `upsert_to_pinecone(chunks, vectors)` — creates index if needed, stores chunks + vectors
+- `get_openai_embeddings(chunks)` — batches all chunks per file, one OpenAI call per file
+- `upsert_to_pinecone(chunks, vectors)` — batches upserts in groups of 50
 - `test_query(query)` — embeds query, searches Pinecone, returns top 3 matches
+- Full pipeline runs on entire FastAPI repo in ~3.5 minutes
 
 ## File Structure
 cotran/
@@ -36,5 +39,10 @@ cotran/
   step1-plan.md
   ingest.py
 
+## Known Limitations (future steps)
+- Ingestion speed: ~3.5 min, target <2 min — fix with async API calls
+- Chunk IDs are not stable across runs (chunk-0, chunk-1...) — duplicates on re-run
+- No error recovery if pipeline fails mid-run
+
 ## Next Session Start Point
-Step 1 is done. Plan Step 2 — scale ingest.py to run on the entire FastAPI repo (not just one file), then decide what Step 2 looks like beyond that.
+Plan Step 2. Decide what the next layer of CoTran looks like — likely: query interface, Claude integration, or VS Code extension scaffold.
