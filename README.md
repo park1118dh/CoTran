@@ -40,7 +40,7 @@ How it works technically:
 User opens a repo in VS Code
 Extension sends repo path to FastAPI backend
 Backend parses and chunks code files by function, class, and module
-Chunks are embedded using OpenAI text-embedding-3-small and stored in ChromaDB
+Chunks are embedded using OpenAI text-embedding-3-small and stored in Pinecone
 Retrieval identifies the most structurally significant components
 Claude API synthesizes a structured orientation document
 Document is displayed in a VS Code webview panel
@@ -73,7 +73,7 @@ Python
 FastAPI REST API
 Code file parsing and chunking
 OpenAI text-embedding-3-small for embeddings
-ChromaDB vector database
+Pinecone vector database
 Anthropic Claude API for orientation generation and syntax assistance
 Deployed on Render or Railway
 
@@ -95,7 +95,7 @@ POST /orient  →  FastAPI Backend (Python)
 
                         ↓
 
-                 Embed chunks → ChromaDB
+                 Embed chunks → Pinecone
 
                         ↓
 

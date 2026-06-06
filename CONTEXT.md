@@ -45,4 +45,4 @@ cotran/
 - No error recovery if pipeline fails mid-run
 
 ## Next Session Start Point
-Plan Step 2. Decide what the next layer of CoTran looks like — likely: query interface, Claude integration, or VS Code extension scaffold.
+Start Step 2 — build main.py with the /orient endpoint. Takes a fixed request, searches Pinecone, sends chunks to Claude Sonnet 4.6, returns a structured orientation document.
