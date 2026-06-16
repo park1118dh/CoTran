@@ -1,19 +1,26 @@
 # CoTran — Project Context
 
 ## Current Status
-Step 2 complete. /orient endpoint working end-to-end. Moving to Step 3 — prompt engineering and retrieval quality.
+Step 3 in progress. Prompt engineering done, system prompt added, top_k increased to 20. Retrieval diversity is the remaining problem — same chunks keep coming back from the same corner of the repo.
 
 ## Active Branch
 feat/backend-pipeline
 
-## Completed: Step 1 — Backend ingestion pipeline
-Goal: Parse a local repo, chunk by function/class, embed with OpenAI, store in Pinecone, query returns relevant chunks ✓
+## Completed: Step 1 — Backend ingestion pipeline ✓
+## Completed: Step 2 — FastAPI backend with /orient endpoint ✓
 
-## Completed: Step 2 — FastAPI backend with /orient endpoint
-Goal: Hit /orient, get back a real orientation document from Claude ✓
+## Step 3 — Prompt engineering and retrieval quality
+### Done
+- System prompt added to Claude call (structured onboarding tone, 4 sections)
+- top_k increased from 3 to 20
+- chunk metadata now stores type (function_definition/class_definition) and length
+- .env file set up — no more manual exports
 
-**Definition of Done — MET:**
-curl request to /orient returns a structured orientation document for the FastAPI repo ✓
+### Remaining
+- Retrieval diversity: all 20 chunks come from the same part of the repo
+- Fix: send multiple targeted queries to Pinecone and deduplicate results
+- Re-run ingest.py to populate Pinecone with new type/length metadata
+- Return only Claude text, not full message object
 
 ## Key Decisions Made
 - Python only for parsing in Step 1, multi-language later
@@ -26,16 +33,7 @@ curl request to /orient returns a structured orientation document for the FastAP
 - Batch size: 50 vectors per upsert call
 - Chunk truncation: 4000 chars for metadata, 8000 chars for embeddings
 - Claude model: claude-sonnet-4-6
-
-## What's Working
-- `walk_repo(repo)` — walks a directory, returns list of all `.py` file paths
-- `walk_node(node, chunks)` — recursively traverses AST, collects function/class nodes
-- `parse_chunks(filepath)` — parses a .py file with tree-sitter, returns list of chunk bytes
-- `get_openai_embeddings(chunks)` — batches all chunks per file, one OpenAI call per file
-- `upsert_to_pinecone(chunks, vectors)` — batches upserts in groups of 50
-- `test_query(query)` — embeds query, searches Pinecone, returns top 3 matches
-- `GET /` — health check
-- `POST /orient` — receives repo_path, queries Pinecone, sends chunks to Claude, returns orientation document
+- top_k: 20
 
 ## File Structure
 cotran/
@@ -45,13 +43,15 @@ cotran/
   step2-plan.md
   ingest.py
   main.py
+  .env (gitignored)
 
-## Known Limitations (next steps)
-- Only retrieving top 3 chunks — not enough context for a full orientation document
-- Prompt is generic — output not meaningfully different from "explain this repo" in Claude Code
-- No structured output format enforced
+## Known Limitations
+- Retrieval diversity: chunks cluster around same repo section
 - Chunk IDs not stable across runs — duplicates on re-run
 - Ingestion speed ~3.5 min — fix with async later
+- Claude response returned as full message object, not just text
 
 ## Next Session Start Point
-Step 3 — improve retrieval (top 20-30 chunks) and prompt engineering (structured output format: purpose, flow, components in order). Goal: output that is meaningfully better than Claude Code.
+1. Re-run ingest.py to repopulate Pinecone with type/length metadata
+2. Replace single query with multiple targeted queries in main.py, deduplicate results
+3. Return only message.content[0].text from /orient instead of full message object

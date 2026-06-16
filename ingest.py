@@ -5,6 +5,9 @@ from pinecone import ServerlessSpec
 import os
 import tree_sitter_python as tspython
 from tree_sitter import Language, Parser
+from dotenv import load_dotenv
+
+load_dotenv()
 
 PY_LANGUAGE = Language(tspython.language())
 parser = Parser((PY_LANGUAGE))
@@ -26,7 +29,7 @@ def walk_repo(repo):
 def walk_node(node, chunks):
     #walks through all nodes recursively through child nodes
     if node.type == "function_definition" or node.type == "class_definition":
-        chunks.append(node.text)
+        chunks.append((node.type, node.text))
     for child_node in node.children:
         walk_node(child_node, chunks)
 
@@ -49,9 +52,10 @@ def get_openai_embeddings(chunks):
     vectors = []
     newchunks = []
     for chunk in chunks:
-        if len(chunk) > 8000:
-            chunk = chunk[:8000]
-        newchunks.append(chunk.decode("utf-8", errors="ignore"))
+        if len(chunk[1]) > 8000:
+            newchunks.append(chunk[1][:8000].decode("utf-8", errors="ignore") if isinstance(chunk[1], bytes) else chunk[1])
+        else:
+            newchunks.append(chunk[1].decode("utf-8", errors="ignore") if isinstance(chunk[1], bytes) else chunk[1])
     response = client.embeddings.create(model = "text-embedding-3-small",
                                             input = newchunks)
     for rdata in response.data:
@@ -65,10 +69,12 @@ def upsert_to_pinecone(chunks, vectors):
                         spec=ServerlessSpec(cloud = "aws", region = "us-east-1"))
     vectors_to_upsert = []
     for i, vector in enumerate(vectors):
-        if len(chunks[i]) > 4000:
-            chunks[i] = chunks[i][:4000]
-        upsert = {"id": f"chunk-{i}", "values": vector, "metadata": {"text": chunks[i].decode()}}
-        vectors_to_upsert.append(upsert)
+        if len(chunks[i][1]) > 4000:
+            upsert = {"id": f"chunk-{i}", "values": vector, "metadata": {"text": chunks[i][1][:4000].decode(), "type":chunks[i][0], "length": len(chunks[i][1][:4000])}}
+            vectors_to_upsert.append(upsert)
+        else:
+            upsert = {"id": f"chunk-{i}", "values": vector, "metadata": {"text": chunks[i][1].decode(), "type":chunks[i][0], "length": len(chunks[i][1])}}
+            vectors_to_upsert.append(upsert)
     for i in range(0, len(vectors_to_upsert), 50):
         batch = vectors_to_upsert[i:i+50]
         index.upsert(vectors=batch)
@@ -78,7 +84,7 @@ def upsert_to_pinecone(chunks, vectors):
 def test_query(query):
     #querying through pinecone db and finding top 3 most similar
     vector = get_openai_embeddings([query])
-    query_response = index.query(vector = vector[0], top_k = 3,
+    query_response = index.query(vector = vector[0], top_k = 20,
                                  include_values = False, include_metadata = True)
     return query_response
     
