@@ -64,6 +64,9 @@ def get_openai_embeddings(chunks):
 
 def upsert_to_pinecone(chunks, vectors):
     #update and insert vectors in to pinecone db
+    if pc.has_index("cotran-v1"):
+        pc.delete_index("cotran-v1")
+
     if not pc.has_index("cotran-v1"):
         pc.create_index(name = "cotran-v1", dimension = 1536, metric = "cosine",
                         spec=ServerlessSpec(cloud = "aws", region = "us-east-1"))
@@ -84,7 +87,7 @@ def upsert_to_pinecone(chunks, vectors):
 def test_query(query):
     #querying through pinecone db and finding top 3 most similar
     vector = get_openai_embeddings([query])
-    query_response = index.query(vector = vector[0], top_k = 20,
+    query_response = index.query(vector = vector[0], top_k = 5,
                                  include_values = False, include_metadata = True)
     return query_response
     

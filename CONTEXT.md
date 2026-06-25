@@ -8,19 +8,15 @@ feat/backend-pipeline
 
 ## Completed: Step 1 — Backend ingestion pipeline ✓
 ## Completed: Step 2 — FastAPI backend with /orient endpoint ✓
+## Step 3 — Prompt engineering and retrieval quality ✓
 
-## Step 3 — Prompt engineering and retrieval quality
+## Step 4 — LLM-powered query generation
 ### Done
-- System prompt added to Claude call (structured onboarding tone, 4 sections)
-- top_k increased from 3 to 20
-- chunk metadata now stores type (function_definition/class_definition) and length
-- .env file set up — no more manual exports
+- Changed 1 query prompt to 4 query prompts each getting top 5 queries for more diversity
+- Output is no longer JSON, and comes out as text
 
 ### Remaining
-- Retrieval diversity: all 20 chunks come from the same part of the repo
-- Fix: send multiple targeted queries to Pinecone and deduplicate results
-- Re-run ingest.py to populate Pinecone with new type/length metadata
-- Return only Claude text, not full message object
+- Implementing LLM powered querying
 
 ## Key Decisions Made
 - Python only for parsing in Step 1, multi-language later
@@ -46,12 +42,13 @@ cotran/
   .env (gitignored)
 
 ## Known Limitations
-- Retrieval diversity: chunks cluster around same repo section
-- Chunk IDs not stable across runs — duplicates on re-run
+- Retrieval diversity: hardcoded queries are FastAPI-specific hacks, not general — need LLM-generated queries
+- Chunk IDs not stable across runs — duplicates on re-run (current fix: delete + recreate index on each ingest)
 - Ingestion speed ~3.5 min — fix with async later
-- Claude response returned as full message object, not just text
 
 ## Next Session Start Point
-1. Re-run ingest.py to repopulate Pinecone with type/length metadata
-2. Replace single query with multiple targeted queries in main.py, deduplicate results
-3. Return only message.content[0].text from /orient instead of full message object
+Implement LLM-generated query generation in main.py:
+1. Before querying Pinecone, walk the repo file tree and send it to Claude
+2. Ask Claude to generate 4-5 targeted search queries specific to that codebase
+3. Use those queries to search Pinecone instead of the current hardcoded prompts
+Goal: retrieval that works on any repo, not just FastAPI
