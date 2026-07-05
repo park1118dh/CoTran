@@ -1,22 +1,22 @@
 # CoTran — Project Context
 
 ## Current Status
-Step 3 in progress. Prompt engineering done, system prompt added, top_k increased to 20. Retrieval diversity is the remaining problem — same chunks keep coming back from the same corner of the repo.
+Backend MVP complete. /orient returns structured JSON with intro card and waypoints array. Ready for frontend (VS Code extension) development.
 
 ## Active Branch
 feat/backend-pipeline
 
 ## Completed: Step 1 — Backend ingestion pipeline ✓
 ## Completed: Step 2 — FastAPI backend with /orient endpoint ✓
-## Step 3 — Prompt engineering and retrieval quality ✓
+## Completed: Step 3 — Prompt engineering and retrieval quality ✓
+## Completed: Step 4 — LLM-powered query generation ✓
 
-## Step 4 — LLM-powered query generation
-### Done
-- Changed 1 query prompt to 4 query prompts each getting top 5 queries for more diversity
-- Output is no longer JSON, and comes out as text
-
-### Remaining
-- Implementing LLM powered querying
+### Step 4 Summary
+- Claude receives the repo file tree (file paths only, not code)
+- Generates 20 search queries based on those paths
+- Queries run against Pinecone (top_k=5 each), results deduplicated
+- Chunks fed to Claude with sys_prompt to produce the onboarding explanation
+- sys_prompt tuned to output plain text, no markdown
 
 ## Key Decisions Made
 - Python only for parsing in Step 1, multi-language later
@@ -41,14 +41,45 @@ cotran/
   main.py
   .env (gitignored)
 
+## Mode 1 Direction (Updated)
+Originally scoped as a panel that displays a prose orientation document. After further consideration, this was dropped — abstract text describing a codebase still leaves the user having to manually connect what they read to the actual code. That gap is where familiarity breaks down.
+
+Mode 1 is now an interactive guided tour, inspired by game tutorials. The insight: a game tutorial doesn't describe the game to you, it puts you inside it and walks you through it. CoTran does the same — the user is always looking at real code, not a description of it.
+
+How it works:
+- Claude generates a sequence of 6-8 waypoints representing the spine of the codebase (entry point → core flow → key components)
+- Each waypoint opens a specific file, highlights a specific line or range, and shows a short explanation
+- The user can only advance by completing the action (go to this file, find this line) — not by just reading
+- Tour length stays constant regardless of repo size; zoom level adjusts (function-level for small repos, module-level for large ones)
+- At the end of the tour, the user has enough familiarity to start navigating and exploring on their own
+
+Architecture shift:
+- Backend output changes from prose to structured JSON (list of waypoints with file path, line range, explanation)
+- Validation layer confirms file paths and line numbers exist before sending to extension
+- Frontend is no longer a static panel — it drives file navigation, line highlighting, and callout UI inside VS Code
+
+## Completed: Step 5 — Backend MVP ✓
+- /orient returns structured JSON: {"intro": {"text": "..."}, "waypoints": [...]}
+- Each waypoint has: filepath, line, description
+- intro generated after waypoints so it can reference the exact concepts the tour uses
+- Retrieval filters exclude test/, docs/, docs_src/, examples/, benchmarks/, scripts/, build/, dist/
+- README fed into query generation (message1) to ground queries in actual codebase purpose
+- sys_prompt tuned: plain language explanations, core files only, use exact line/path from metadata
+- sys_prompt2 (intro): car dealership analogy, plain language, coherent with waypoints
+- json.loads used to parse both outputs; strip_json_block helper handles markdown wrapper edge case
+
 ## Known Limitations
-- Retrieval diversity: hardcoded queries are FastAPI-specific hacks, not general — need LLM-generated queries
-- Chunk IDs not stable across runs — duplicates on re-run (current fix: delete + recreate index on each ingest)
-- Ingestion speed ~3.5 min — fix with async later
+- Line numbers still occasionally guessed when Claude falls back to parametric knowledge (retrieval miss)
+- Chunk IDs not stable across runs (current fix: delete + recreate index on each ingest)
+- Ingestion speed ~3 min — fix with async later
+- No validation layer yet — file paths not confirmed to exist before returning
 
 ## Next Session Start Point
-Implement LLM-generated query generation in main.py:
-1. Before querying Pinecone, walk the repo file tree and send it to Claude
-2. Ask Claude to generate 4-5 targeted search queries specific to that codebase
-3. Use those queries to search Pinecone instead of the current hardcoded prompts
-Goal: retrieval that works on any repo, not just FastAPI
+Start VS Code extension (frontend). Backend is ready.
+Extension needs to:
+1. Read repo path from VS Code workspace
+2. POST to /orient backend
+3. Display intro card in a webview panel
+4. On user advance, open the file at the given filepath and highlight the given line
+5. Show explanation as a callout/decoration next to the highlighted line
+6. "Next" button advances to the next waypoint

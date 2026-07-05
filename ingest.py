@@ -20,16 +20,22 @@ def walk_repo(repo):
     #returns the paths as a list
     files = os.walk(repo)
     pyfiles = []
+    avoidfiles = {"docs", "docs_src", "examples", "benchmarks", "scripts", "build", "dist", "test"}
     for file in files:
         for filename in file[2]:
+            appbool = True
             if filename.endswith(".py"):
-                pyfiles.append(os.path.join(file[0], filename))
+                for signal in avoidfiles:
+                    if signal in file[0]:
+                        appbool = False
+                if appbool:
+                    pyfiles.append(os.path.join(file[0], filename))
     return pyfiles
 
 def walk_node(node, chunks):
     #walks through all nodes recursively through child nodes
     if node.type == "function_definition" or node.type == "class_definition":
-        chunks.append((node.type, node.text))
+        chunks.append((node.type, node.text, node.start_point[0]))
     for child_node in node.children:
         walk_node(child_node, chunks)
 
@@ -39,13 +45,16 @@ def parse_chunks(file):
     #takes a file and reads its content
     #parse the encoded contents of the file in to a tree
     #traverses that tree and collects the chunks
-    with open(file) as f:
+    with open(file, encoding = "utf-8", errors = "ignore") as f:
         contents = f.read()
     tree = parser.parse(contents.encode())
     curr = tree.root_node
     chunks = []
     chunks = walk_node(curr, chunks)
-    return chunks
+    reschunks = []
+    for chunk in chunks:
+        reschunks.append((chunk[0], chunk[1], chunk[2], file))
+    return reschunks
 
 def get_openai_embeddings(chunks):
     #generate a list of vector embeddings from the list of chunks
@@ -73,10 +82,10 @@ def upsert_to_pinecone(chunks, vectors):
     vectors_to_upsert = []
     for i, vector in enumerate(vectors):
         if len(chunks[i][1]) > 4000:
-            upsert = {"id": f"chunk-{i}", "values": vector, "metadata": {"text": chunks[i][1][:4000].decode(), "type":chunks[i][0], "length": len(chunks[i][1][:4000])}}
+            upsert = {"id": f"chunk-{i}", "values": vector, "metadata": {"text": chunks[i][1][:4000].decode(), "type":chunks[i][0], "length": len(chunks[i][1][:4000]), "start": chunks[i][2], "path": chunks[i][3]}}
             vectors_to_upsert.append(upsert)
         else:
-            upsert = {"id": f"chunk-{i}", "values": vector, "metadata": {"text": chunks[i][1].decode(), "type":chunks[i][0], "length": len(chunks[i][1])}}
+            upsert = {"id": f"chunk-{i}", "values": vector, "metadata": {"text": chunks[i][1].decode(), "type":chunks[i][0], "length": len(chunks[i][1]), "start": chunks[i][2], "path": chunks[i][3]}}
             vectors_to_upsert.append(upsert)
     for i in range(0, len(vectors_to_upsert), 50):
         batch = vectors_to_upsert[i:i+50]

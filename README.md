@@ -20,20 +20,23 @@ CoTran is a VS Code extension with a Python backend. It has three features acros
 
 
 Mode 1 — Codebase Orientation (Priority)
-When you open a repository, CoTran generates a structured guided walkthrough of the codebase displayed as a VS Code panel.
+When you open a repository, CoTran runs an interactive guided tour of the codebase — directly inside your editor.
 
-Not a file-by-file dump. A narrative.
+Not a document about the code. A tour through it.
 
-The orientation document contains:
+The problem with abstract orientation (a summary, a panel, a video): the user still has to manually connect what they read to the actual code. That gap is where familiarity breaks down. CoTran removes the gap entirely — the user is always looking at real code, with CoTran pointing and explaining while they're in it.
 
-Purpose of the codebase in plain language
-Primary input — what goes in and where it enters
-Step-by-step flow through the system — which functions handle what, in order
-Key components and what they do
-Entry points and how to start navigating
-Dependencies and why they exist
+Inspired by game tutorials. A good tutorial doesn't describe the game to you — it puts you inside it, shows you one thing at a time, in the order you'll encounter it, and makes you do something before you can move on. CoTran does the same for a codebase.
 
-The difference from Claude Code: Claude Code gives you exact descriptions when you ask. CoTran gives you a mental model first, unprompted, structured the way a senior engineer would explain it to you on your first day. The ordering is the product.
+How the tour works:
+
+CoTran identifies 6-8 waypoints that form the spine of the codebase — entry point, core flow, key components
+Each waypoint opens a specific file, highlights a specific line or range, and shows a short plain-language explanation
+The user must complete an action (navigate to a file, find a line) before advancing to the next waypoint
+Tour length stays constant regardless of repo size — zoom level adjusts automatically (function-level for small repos, module-level for large ones)
+By the end, the user knows where to start, what the core flow is, and feels safe enough to start navigating on their own
+
+The difference from Claude Code: Claude Code answers questions when you ask. CoTran builds the foundation so you know what questions to ask — and where to look.
 
 How it works technically:
 
@@ -41,9 +44,9 @@ User opens a repo in VS Code
 Extension sends repo path to FastAPI backend
 Backend parses and chunks code files by function, class, and module
 Chunks are embedded using OpenAI text-embedding-3-small and stored in Pinecone
-Retrieval identifies the most structurally significant components
-Claude API synthesizes a structured orientation document
-Document is displayed in a VS Code webview panel
+Claude generates a sequence of 6-8 waypoints (file path, line range, explanation) representing the spine of the codebase
+Validation layer confirms all file paths and line numbers exist
+Extension drives the tour — opens files, highlights lines, shows callouts, waits for user to advance
 
 
 Mode 2 — Syntax Assistant (After Mode 1 is complete)

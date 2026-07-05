@@ -13,3 +13,7 @@ Test Repo: FastAPI opensource repo. This is repo is approximately 10000-15000 li
 Files created: ingest.py
 
 ingest.py: will take a local repo and turn it into a searchable vector database
+
+Defintion of done: When running ingest.py, it finishes without errors, and test query returns 3 meaningful and relevant chunks to the query.
+
+Out of scope: this step is to not get a working v1 model. we are not accessing Claude AI, and we are not building any of the features that makes CoTran what it is.
