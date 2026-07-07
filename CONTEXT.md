@@ -74,12 +74,26 @@ Architecture shift:
 - Ingestion speed ~3 min — fix with async later
 - No validation layer yet — file paths not confirmed to exist before returning
 
+## Completed: Step 6 — VS Code Extension Scaffold + Intro Card ✓
+- Scaffolded VS Code extension with TypeScript (yo code)
+- Extension activates, POSTs to /orient with workspace folder path
+- Receives {intro, waypoints} JSON from backend
+- Displays intro card text in a webview panel
+- Loading message shown while backend processes
+- Command registered as 'cotran.helloWorld' (rename to 'cotran.startTour' next)
+
 ## Next Session Start Point
-Start VS Code extension (frontend). Backend is ready.
-Extension needs to:
-1. Read repo path from VS Code workspace
-2. POST to /orient backend
-3. Display intro card in a webview panel
-4. On user advance, open the file at the given filepath and highlight the given line
-5. Show explanation as a callout/decoration next to the highlighted line
-6. "Next" button advances to the next waypoint
+Add waypoint navigation to the webview panel:
+1. Store waypoints array from the backend response
+2. Show first waypoint explanation in the panel alongside intro
+3. Add "Next" button to the webview HTML
+4. On "Next" click — open the file at waypoint.filepath and jump to waypoint.line
+5. Highlight the line using vscode.window.showTextDocument + editor.setDecorations
+6. Show waypoint explanation as a callout next to the highlighted line
+7. Advance to next waypoint on each click
+
+Key API calls needed:
+- vscode.workspace.openTextDocument(filepath) — open the file
+- vscode.window.showTextDocument(doc, {selection: range}) — jump to line
+- editor.setDecorations(decorationType, [range]) — highlight the line
+- Messages from webview to extension: panel.webview.onDidReceiveMessage
