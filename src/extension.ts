@@ -32,8 +32,33 @@ export function activate(context: vscode.ExtensionContext) {
 	console.log(JSON.stringify(data));
 
 	const introText = data.intro.text;
+	const waypoints = data.waypoints;
+	
 	const panel = vscode.window.createWebviewPanel('CoTranIntro', 'CoTran', vscode.ViewColumn.One,{} );
-	panel.webview.html = `<h1>${introText}</h1>`;
+	panel.webview.html = `
+    	<!DOCTYPE html>
+		<html>
+    	<body>
+        	<p>${introText}</p>
+        	<button onclick="navigate()">Start Tour</button>
+        	<script>
+            	const vscode = acquireVsCodeApi();
+            	function navigate() {
+                	vscode.postMessage({ command: 'next', index: 0 });
+            	}
+        	</script>
+    	</body>
+    	</html>
+	`;
+	panel.webview.onDidReceiveMessage(async (message) => {
+		if (message.command === 'next') {
+			const waypoint = waypoints[message.index];
+			const doc = await vscode.workspace.openTextDocument(waypoint.filepath);
+			await vscode.window.showTextDocument(doc);
+		}
+	});
+
+	
 
 	});
 	

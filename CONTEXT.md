@@ -82,18 +82,17 @@ Architecture shift:
 - Loading message shown while backend processes
 - Command registered as 'cotran.helloWorld' (rename to 'cotran.startTour' next)
 
-## Next Session Start Point
-Add waypoint navigation to the webview panel:
-1. Store waypoints array from the backend response
-2. Show first waypoint explanation in the panel alongside intro
-3. Add "Next" button to the webview HTML
-4. On "Next" click — open the file at waypoint.filepath and jump to waypoint.line
-5. Highlight the line using vscode.window.showTextDocument + editor.setDecorations
-6. Show waypoint explanation as a callout next to the highlighted line
-7. Advance to next waypoint on each click
+## Completed: Step 7 — Webview panel with Start Tour button ✓
+- Panel shows intro text and "Start Tour" button
+- Button sends postMessage to extension with {command: 'next', index: 0}
+- Extension listens with onDidReceiveMessage, opens the file at waypoint.filepath
+- Uses vscode.workspace.openTextDocument + vscode.window.showTextDocument
 
-Key API calls needed:
-- vscode.workspace.openTextDocument(filepath) — open the file
-- vscode.window.showTextDocument(doc, {selection: range}) — jump to line
-- editor.setDecorations(decorationType, [range]) — highlight the line
-- Messages from webview to extension: panel.webview.onDidReceiveMessage
+## Next Session Start Point
+Three things to add in order:
+1. Jump to the correct line — add {selection: new vscode.Range(line, 0, line, 0)} to showTextDocument
+   - waypoint.line is the line number, vscode.Range is 0-indexed so subtract 1
+2. Highlight the line — use editor.setDecorations with a colored background decoration
+   - vscode.window.createTextEditorDecorationType({backgroundColor: 'rgba(255,255,0,0.3)'})
+3. Advance through waypoints — track current index, update panel HTML to show current waypoint explanation and "Next" button that sends the next index
+   - When index >= waypoints.length, show "Tour complete" message
